@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Word Game</title>
+  <style>
+    body {
+      background-color: #a8d5ba;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding-top: 30px;
+      overflow-x: hidden;
+    }
+    .letters, .slots {
+      display: flex;
+      justify-content: center;
+      margin: 20px;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .box {
+      width: 60px;
+      height: 60px;
+      font-size: 24px;
+      font-weight: bold;
+      border: 2px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #f2f2f2;
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+      touch-action: none;
+    }
+    .slot {
+      width: 60px;
+      height: 60px;
+      border: 2px dashed #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #fff;
+      border-radius: 8px;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 8px;
+      background-color: #40916c;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #2d6a4f;
+    }
+    .flash {
+      animation: flash 0.2s ease-in-out 3;
+    }
+    @keyframes flash {
+      0% { background-color: red; }
+      50% { background-color: white; }
+      100% { background-color: red; }
+    }
+    #level {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #fff;
+    }
+    #successMessage {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #74c69d;
+      color: white;
+      padding: 20px 40px;
+      border-radius: 15px;
+      font-size: 28px;
+      display: none;
+      animation: pop 0.6s ease;
+      z-index: 1000;
+    }
+    @keyframes pop {
+      0% { transform: translate(-50%, -50%) scale(0); }
+      50% { transform: translate(-50%, -50%) scale(1.1); }
+      100% { transform: translate(-50%, -50%) scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <div id="level">Seviye 1</div>
+  <h2 style="color: white;">Drag the letters to form the word</h2>
+  <div id="translation" style="font-size: 22px; margin-bottom: 20px; color: #f2f2f2;"></div>
+  <div class="letters" id="letters"></div>
+  <div class="slots" id="slots"></div>
+  <button onclick="checkWord()">Check</button>
+  <button onclick="undoMove()">Undo</button>
+  <button onclick="nextLevel()">Next Level</button>
+  <div id="successMessage">Tebrikler!</div>
+  <script>
+    let currentLevel = 0;
+    let draggedItem = null;
+    let offsetX = 0, offsetY = 0;
+    let isDragging = false;
+    const levels = [
+      { word: ['V','I','R','U','S'], turkishTranslation: "Virüs" },
+      { word: ['Y','O','G','H','U','R','T'], turkishTranslation: "Yoğurt" },
+      { word: ['Z','E','B','R','A'], turkishTranslation: "Zebra" },
+      { word: ['V','I','T','A','M','I','N'], turkishTranslation: "Vitamin" },
+      { word: ['V','I','S','I','O','N'], turkishTranslation: "Vizyon" },
+      { word: ['V','I','D','E','O'], turkishTranslation: "Video" },
+      { word: ['V','E','R','S','I','O','N'], turkishTranslation: "Sürüm" },
+      { word: ['V','A','S','E'], turkishTranslation: "Vazo" },
+      { word: ['V','A','N','I','L','L','A'], turkishTranslation: "Vanilya" },
+      { word: ['U','N','I','V','E','R','S','I','T','Y'], turkishTranslation: "Üniversite" },
+      { word: ['T','-','S','H','I','R','T'], turkishTranslation: "Tişört" },
+      { word: ['T','R','E','N','D'], turkishTranslation: "Trend" },
+      { word: ['T','R','A','U','M','A'], turkishTranslation: "Travma" },
+      { word: ['T','R','A','N','S','F','E','R'], turkishTranslation: "Transfer" },
+      { word: ['T','R','A','I','N'], turkishTranslation: "Tren" },
+      { word: ['T','R','A','C','T','O','R'], turkishTranslation: "Traktör" },
+      { word: ['T','R','A','F','F','I','C'], turkishTranslation: "Trafik" },
+      { word: ['T','O','N','I','C'], turkishTranslation: "Tonik" },
+      { word: ['T','U','R'], turkishTranslation: "Tur" },
+      { word: ['T','O','I','L','E','T'], turkishTranslation: "Tuvalet" },
+      { word: ['T','H','E','R','A','P','Y'], turkishTranslation: "Terapi" },
+      { word: ['T','E','S','T'], turkishTranslation: "Test" },
+      { word: ['T','E','L','E','V','I','S','I','O','N'], turkishTranslation: "Televizyon" },
+      { word: ['T','E','C','H','N','I','C','A','L'], turkishTranslation: "Teknik" },
+      { word: ['T','A','X','I'], turkishTranslation: "Taksi" },
+      { word: ['T','A','N','K','E','R'], turkishTranslation: "Tanker" },
+      { word: ['T','A','C','T','I','C'], turkishTranslation: "Taktik" },
+      { word: ['S','Y','S','T','E','M'], turkishTranslation: "Sistem" },
+      { word: ['S','Y','R','U','P'], turkishTranslation: "Şurup" },
+      { word: ['S','Y','M','B','O','L'], turkishTranslation: "Sembol" },
+      { word: ['S','T','Y','L','E'], turkishTranslation: "Stil" },
+      { word: ['S','U','P','E','R'], turkishTranslation: "Süper" },
+      { word: ['S','T','O','C','K'], turkishTranslation: "Stok" },
+      { word: ['S','T','A','R'], turkishTranslation: "Yıldız" },
+      { word: ['S','P','R','A','Y'], turkishTranslation: "Sprey" },
+      { word: ['S','H','O','C','K'], turkishTranslation: "Şok" },
+      { word: ['S','E','R','U','M'], turkishTranslation: "Serum" },
+      { word: ['S','C','O','R','E'], turkishTranslation: "Skor" },
+      { word: ['S','A','U','C','E'], turkishTranslation: "Sos" },
+      { word: ['S','C','A','N','D','A','L'], turkishTranslation: "Skandal" },
+      { word: ['S','A','F','A','R','I'], turkishTranslation: "Safari" },
+      { word: ['R','O','U','T','I','N','E'], turkishTranslation: "Rutin" },
+      { word: ['S','A','B','O','T','A','G','E'], turkishTranslation: "Sabotaj" },
+      { word: ['R','O','C','K','E','T'], turkishTranslation: "Roket" },
+      { word: ['R','E','S','T','A','U','R','A','N','T'], turkishTranslation: "Restoran" },
+      { word: ['R','E','F','L','E','X'], turkishTranslation: "Refleks" },
+      { word: ['R','A','D','A','R'], turkishTranslation: "Radar" },
+      { word: ['P','R','O','J','E','C','T'], turkishTranslation: "Proje" },
+      { word: ['P','R','O','J','E','C','T','O','R'], turkishTranslation: "Projeksiyon" },
+      { word: ['P','R','O','G','R','A','M'], turkishTranslation: "Program" },
+      { word: ['P','R','E','S','S'], turkishTranslation: "Basın" },
+      { word: ['P','O','T','A','T','O'], turkishTranslation: "Patates" },
+      { word: ['P','O','L','O'], turkishTranslation: "Polo" },
+      { word: ['P','O','L','I','T','I','C','S'], turkishTranslation: "Politika" },
+      { word: ['P','I','Z','Z','A'], turkishTranslation: "Pizza" },
+      { word: ['P','H','O','T','O','G','R','A','P','H'], turkishTranslation: "Fotoğraf" },
+      { word: ['P','E','R','F','U','M','E'], turkishTranslation: "Parfüm" },
+      { word: ['P','E','N','G','U','I','N'], turkishTranslation: "Penguen" },
+      { word: ['P','E','D','A','L'], turkishTranslation: "Pedal" }
+    ];
+    function shuffleWord(word) {
+      return word.sort(() => Math.random() - 0.5);
+    }
+    function makeDraggable(element) {
+      element.addEventListener('pointerdown', (e) => {
+        draggedItem = element;
+        isDragging = true;
+        offsetX = e.clientX - element.getBoundingClientRect().left;
+        offsetY = e.clientY - element.getBoundingClientRect().top;
+        element.style.position = 'absolute';
+        element.style.zIndex = 1000;
+        moveAt(e.pageX, e.pageY);
+        element.setPointerCapture(e.pointerId);
+      });
+      element.addEventListener('pointermove', (e) => {
+        if (isDragging && draggedItem === element) moveAt(e.pageX, e.pageY);
+      });
+      element.addEventListener('pointerup', (e) => {
+        if (isDragging && draggedItem === element) {
+          isDragging = false;
+          element.releasePointerCapture(e.pointerId);
+          dropAt(e.pageX, e.pageY, element);
+        }
+      });
+    }
+    function moveAt(pageX, pageY) {
+      draggedItem.style.left = pageX - offsetX + 'px';
+      draggedItem.style.top = pageY - offsetY + 'px';
+    }
+    function dropAt(x, y, element) {
+      const slots = document.querySelectorAll('.slot');
+      let foundSlot = null;
+      slots.forEach(slot => {
+        const rect = slot.getBoundingClientRect();
+        if (x > rect.left && x < rect.right && y > rect.top && y < rect.bottom && !slot.firstChild) {
+          foundSlot = slot;
+        }
+      });
+      if (foundSlot) {
+        foundSlot.appendChild(element);
+        resetStyles(element);
+      } else {
+        document.getElementById('letters').appendChild(element);
+        resetStyles(element);
+      }
+    }
+    function resetStyles(element) {
+      element.style.position = '';
+      element.style.left = '';
+      element.style.top = '';
+      element.style.zIndex = '';
+    }
+    function loadLevel() {
+      const level = levels[currentLevel];
+      document.getElementById('translation').textContent = level.turkishTranslation;
+      document.getElementById('level').textContent = `Seviye ${currentLevel + 1}`;
+      const lettersContainer = document.getElementById('letters');
+      const slotsContainer = document.getElementById('slots');
+      lettersContainer.innerHTML = '';
+      slotsContainer.innerHTML = '';
+      const shuffledLetters = shuffleWord([...level.word]);
+      shuffledLetters.forEach(letter => {
+        const letterBox = document.createElement('div');
+        letterBox.classList.add('box');
+        letterBox.textContent = letter;
+        lettersContainer.appendChild(letterBox);
+        makeDraggable(letterBox);
+      });
+      level.word.forEach(() => {
+        const slot = document.createElement('div');
+        slot.classList.add('slot');
+        slotsContainer.appendChild(slot);
+      });
+    }
+    function checkWord() {
+      const slots = document.querySelectorAll('.slot');
+      const level = levels[currentLevel];
+      let formedWord = '';
+      slots.forEach(slot => {
+        if (slot.firstChild && slot.firstChild.textContent) {
+          formedWord += slot.firstChild.textContent;
+        } else {
+          formedWord += ' ';
+        }
+      });
+      const correctWord = level.word.join('');
+      if (formedWord.trim() === correctWord) {
+        showSuccessMessage();
+      } else {
+        slots.forEach(slot => {
+          if (slot.firstChild) {
+            slot.firstChild.classList.add("flash");
+            setTimeout(() => slot.firstChild.classList.remove("flash"), 600);
+          }
+        });
+      }
+    }
+    function undoMove() {
+      const slots = document.querySelectorAll('.slot');
+      for (let i = slots.length - 1; i >= 0; i--) {
+        const slot = slots[i];
+        if (slot.firstChild) {
+          const letter = slot.firstChild;
+          slot.removeChild(letter);
+          document.getElementById('letters').appendChild(letter);
+          break;
+        }
+      }
+    }
+    function nextLevel() {
+      currentLevel++;
+      if (currentLevel < levels.length) {
+        loadLevel();
+      } else {
+        alert("Tüm seviyeleri bitirdiniz!");
+      }
+    }
+    function showSuccessMessage() {
+      const message = document.getElementById('successMessage');
+      message.style.display = 'block';
+      setTimeout(() => {
+        message.style.display = 'none';
+      }, 1500);
+    }
+    loadLevel();
+  </script>
+</body>
+</html>
